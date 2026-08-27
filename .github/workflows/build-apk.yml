@@ -2,9 +2,7 @@ name: Build Android APK (Gym Survivor)
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -25,25 +23,27 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Godot Engine
-        uses: chickenandpork/setup-godot@v2
-        with:
-          version: '4.2.1'
-          use-dotnet: false
+      - name: Download and Install Godot 4.2.1
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_linux.x86_64.zip
+          unzip Godot_v4.2.1-stable_linux.x86_64.zip
+          sudo mv Godot_v4.2.1-stable_linux.x86_64 /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
 
       - name: Generate Debug Keystore
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=BR" -validity 10000
+          mkdir -p ~/.android
           mv debug.keystore ~/.android/debug.keystore
 
       - name: Download Godot Export Templates
         run: |
           GODOT_VERSION="4.2.1.stable"
-          mkdir -p ~/.local/share/godot/build_templates/4.2.1.stable
-          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz
-          unzip -q Godot_v${GODOT_VERSION}_export_templates.tpz
-          mv templates/* ~/.local/share/godot/build_templates/4.2.1.stable/
-          rm Godot_v${GODOT_VERSION}_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.2.1.stable
+          wget -q https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_export_templates.tpz
+          unzip -q Godot_v4.2.1-stable_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/4.2.1.stable/
+          rm Godot_v4.2.1-stable_export_templates.tpz
 
       - name: Build Android APK
         run: |
