@@ -39,10 +39,11 @@ jobs:
       - name: Download Godot Export Templates
         run: |
           GODOT_VERSION="4.2.1.stable"
-          mkdir -p ~/.local/share/godot/export_templates/4.2.1.stable
+          TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}"
+          mkdir -p "$TEMPLATES_DIR"
           wget -q https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_export_templates.tpz
           unzip -q Godot_v4.2.1-stable_export_templates.tpz
-          mv templates/* ~/.local/share/godot/export_templates/4.2.1.stable/
+          mv templates/* "$TEMPLATES_DIR/"
           rm Godot_v4.2.1-stable_export_templates.tpz
 
       - name: Build Android APK
