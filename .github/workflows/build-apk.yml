@@ -45,7 +45,7 @@ jobs:
           mv templates/* "$TEMPLATES_DIR/"
           rm Godot_v4.2.1-stable_export_templates.tpz
 
-      - name: Generate Dummy Icon and Project Files
+      - name: Generate Dummy Icon, Structure and Export Preset
         run: |
           mkdir -p scenes/ui scenes/main scripts/autoload scripts/ui
 
@@ -113,6 +113,38 @@ jobs:
           	get_tree().quit()
           EOF
 
+          # Criar o export_presets.cfg exigido pelo Godot
+          cat << 'EOF' > export_presets.cfg
+          [preset.0]
+
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server_id=0
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/gym-survivor.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          architectures/armeabi-v7a=true
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          package/unique_name="com.example.gymsurvivor"
+          package/name="Gym Survivor"
+          package/signed=true
+          EOF
+
       - name: Generate Debug Keystore & Setup Settings
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=BR" -validity 10000
@@ -131,15 +163,11 @@ jobs:
       - name: Import Assets and Export APK
         run: |
           mkdir -p build
-          # Importar o projeto primeiro para registrar assets
           godot --headless --editor --quit || true
-          # Exportar release
           godot --headless --verbose --export-release "Android" build/gym-survivor.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gym-survivor-apk
-          path: |
-            build/*.apk
-            **/*.apk
+          path: build/gym-survivor.apk
