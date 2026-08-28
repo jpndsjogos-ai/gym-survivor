@@ -7,7 +7,7 @@ on:
 
 jobs:
   export-android:
-    name: Generate Android APK
+    name: Gerar APK para Android
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,14 @@ jobs:
           unzip Godot_v4.2.1-stable_linux.x86_64.zip
           sudo mv Godot_v4.2.1-stable_linux.x86_64 /usr/local/bin/godot
           chmod +x /usr/local/bin/godot
+
+      - name: Generate Dummy Main Scene (If Missing)
+        run: |
+          mkdir -p scenes/ui
+          if [ ! -f "scenes/ui/main_menu.tscn" ]; then
+            echo '[gd_scene format=3 uid="uid://mainmenu123"]' > scenes/ui/main_menu.tscn
+            echo '[node name="MainMenu" type="Control"]' >> scenes/ui/main_menu.tscn
+          fi
 
       - name: Generate Debug Keystore
         run: |
