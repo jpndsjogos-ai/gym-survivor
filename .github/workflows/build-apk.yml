@@ -23,11 +23,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android Build Tools
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33" "platform-tools"
-
       - name: Download and Install Godot 4.2.1
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_linux.x86_64.zip
@@ -45,7 +40,7 @@ jobs:
           mv templates/* "$TEMPLATES_DIR/"
           rm Godot_v4.2.1-stable_export_templates.tpz
 
-      - name: Generate Dummy Icon, Structure and Export Preset
+      - name: Generate Dummy Icon and Structure
         run: |
           mkdir -p scenes/ui scenes/main scripts/autoload scripts/ui
 
@@ -113,7 +108,7 @@ jobs:
           	get_tree().quit()
           EOF
 
-          # Criar o export_presets.cfg exigido pelo Godot
+          # Presets configurados especificamente para exportação nativa Android no Godot 4
           cat << 'EOF' > export_presets.cfg
           [preset.0]
 
@@ -122,7 +117,7 @@ jobs:
           runnable=true
           dedicated_server_id=0
           custom_features=""
-          export_filter="all_resources"
+          export_filter="resources"
           include_filter=""
           exclude_filter=""
           export_path="build/gym-survivor.apk"
@@ -136,11 +131,11 @@ jobs:
           custom_template/debug=""
           custom_template/release=""
           gradle_build/use_gradle_build=false
-          architectures/armeabi-v7a=true
+          architectures/armeabi-v7a=false
           architectures/arm64-v8a=true
           architectures/x86=false
           architectures/x86_64=false
-          package/unique_name="com.example.gymsurvivor"
+          package/unique_name="com.gymsurvivor.game"
           package/name="Gym Survivor"
           package/signed=true
           EOF
@@ -160,11 +155,13 @@ jobs:
           debug_keystore_password = "android"
           EOF
 
-      - name: Import Assets and Export APK
+      - name: Import Project and Export APK
         run: |
           mkdir -p build
-          godot --headless --editor --quit || true
-          godot --headless --verbose --export-release "Android" build/gym-survivor.apk
+          # Importar recursos primeiro para gerar a pasta .godot/
+          godot --headless --editor --quit
+          # Executar a exportação do APK
+          godot --headless --export-release "Android" build/gym-survivor.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
