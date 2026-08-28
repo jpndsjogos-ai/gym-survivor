@@ -30,13 +30,102 @@ jobs:
           sudo mv Godot_v4.2.1-stable_linux.x86_64 /usr/local/bin/godot
           chmod +x /usr/local/bin/godot
 
-      - name: Generate Dummy Main Scene (If Missing)
+      - name: Generate Complete Project Structure
         run: |
-          mkdir -p scenes/ui
-          if [ ! -f "scenes/ui/main_menu.tscn" ]; then
-            echo '[gd_scene format=3 uid="uid://mainmenu123"]' > scenes/ui/main_menu.tscn
-            echo '[node name="MainMenu" type="Control"]' >> scenes/ui/main_menu.tscn
-          fi
+          mkdir -p scenes/ui scenes/player scenes/enemies scenes/world scripts/autoload scripts/ui scripts/player scripts/enemies scripts/world scripts/main
+
+          # Autoload Save System
+          cat << 'EOF' > scripts/autoload/save_system.gd
+          class_name SaveSystem
+          extends Node
+          const SAVE_PATH: String = "user://save_data.cfg"
+          var high_score_time: float = 0.0
+          var total_kills: int = 0
+          var total_reps_collected: int = 0
+          func _ready() -> void: load_game()
+          func save_game() -> void:
+          	var config = ConfigFile.new()
+          	config.set_value("stats", "high_score_time", high_score_time)
+          	config.save(SAVE_PATH)
+          func load_game() -> void:
+          	var config = ConfigFile.new()
+          	if config.load(SAVE_PATH) == OK:
+          		high_score_time = config.get_value("stats", "high_score_time", 0.0)
+          func check_and_update_high_score(survival_time: float) -> bool:
+          	if survival_time > high_score_time:
+          		high_score_time = survival_time
+          		save_game()
+          		return true
+          	return false
+          EOF
+
+          # Main Menu Scene
+          cat << 'EOF' > scenes/ui/main_menu.tscn
+          [gd_scene load_steps=2 format=3 uid="uid://mainmenu123"]
+          [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+          [node name="MainMenu" type="Control"]
+          layout_mode = 3
+          anchors_preset = 15
+          anchor_right = 1.0
+          anchor_bottom = 1.0
+          grow_horizontal = 2
+          grow_vertical = 2
+          script = ExtResource("1_menu")
+          [node name="VBoxContainer" type="VBoxContainer" parent="."]
+          layout_mode = 1
+          anchors_preset = 8
+          anchor_left = 0.5
+          anchor_top = 0.5
+          anchor_right = 0.5
+          anchor_bottom = 0.5
+          offset_left = -200.0
+          offset_top = -100.0
+          offset_right = 200.0
+          offset_bottom = 100.0
+          grow_horizontal = 2
+          grow_vertical = 2
+          [node name="TitleLabel" type="Label" parent="VBoxContainer"]
+          layout_mode = 2
+          text = "GYM SURVIVOR"
+          horizontal_alignment = 1
+          [node name="RecordLabel" type="Label" parent="VBoxContainer"]
+          layout_mode = 2
+          text = "Melhor Tempo: 00:00"
+          horizontal_alignment = 1
+          [node name="PlayButton" type="Button" parent="VBoxContainer"]
+          custom_minimum_size = Vector2(0, 80)
+          layout_mode = 2
+          text = "JOGAR"
+          [node name="QuitButton" type="Button" parent="VBoxContainer"]
+          custom_minimum_size = Vector2(0, 80)
+          layout_mode = 2
+          text = "SAIR"
+          EOF
+
+          # Main Menu Script
+          cat << 'EOF' > scripts/ui/main_menu.gd
+          class_name MainMenu
+          extends Control
+          @onready var record_label: Label = $VBoxContainer/RecordLabel
+          @onready var play_button: Button = $VBoxContainer/PlayButton
+          @onready var quit_button: Button = $VBoxContainer/QuitButton
+          func _ready() -> void:
+          	play_button.pressed.connect(_on_play_pressed)
+          	quit_button.pressed.connect(_on_quit_pressed)
+          	var high_time = SaveSystem.high_score_time
+          	record_label.text = "Melhor Tempo: %02d:%02d" % [int(high_time) / 60, int(high_time) % 60]
+          func _on_play_pressed() -> void:
+          	get_tree().change_scene_to_file("res://scenes/main/main.tscn")
+          func _on_quit_pressed() -> void:
+          	get_tree().quit()
+          EOF
+
+          # Main Scene
+          mkdir -p scenes/main
+          cat << 'EOF' > scenes/main/main.tscn
+          [gd_scene format=3 uid="uid://mainscene123"]
+          [node name="Main" type="Node2D"]
+          EOF
 
       - name: Generate Debug Keystore
         run: |
