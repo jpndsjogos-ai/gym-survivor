@@ -23,7 +23,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate Dummy Icon and Complete Structure
+      - name: Install Android Build Tools
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33" "platform-tools"
+
+      - name: Download and Install Godot 4.2.1
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_linux.x86_64.zip
+          unzip Godot_v4.2.1-stable_linux.x86_64.zip
+          sudo mv Godot_v4.2.1-stable_linux.x86_64 /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
+
+      - name: Download Godot Export Templates
+        run: |
+          GODOT_VERSION="4.2.1.stable"
+          TEMPLATES_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}"
+          mkdir -p "$TEMPLATES_DIR"
+          wget -q https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_export_templates.tpz
+          unzip -q Godot_v4.2.1-stable_export_templates.tpz
+          mv templates/* "$TEMPLATES_DIR/"
+          rm Godot_v4.2.1-stable_export_templates.tpz
+
+      - name: Generate Dummy Icon and Project Files
         run: |
           mkdir -p scenes/ui scenes/main scripts/autoload scripts/ui
 
@@ -91,23 +113,33 @@ jobs:
           	get_tree().quit()
           EOF
 
-      - name: Generate Debug Keystore
+      - name: Generate Debug Keystore & Setup Settings
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=BR" -validity 10000
           mkdir -p ~/.android
           mv debug.keystore ~/.android/debug.keystore
 
-      - name: Export Godot Android APK
-        uses: firebelley/godot-export@v6.0.0
-        with:
-          godot_version: 4.2.1
-          godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_linux.x86_64.zip
-          godot_export_templates_download_url: https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_export_templates.tpz
-          relative_project_path: ./
-          archive_output: false
+          mkdir -p ~/.config/godot
+          cat << EOF > ~/.config/godot/editor_settings-4.godot
+          [export/android]
+          android_sdk_path = "$ANDROID_HOME"
+          debug_keystore = "$HOME/.android/debug.keystore"
+          debug_keystore_user = "androiddebugkey"
+          debug_keystore_password = "android"
+          EOF
+
+      - name: Import Assets and Export APK
+        run: |
+          mkdir -p build
+          # Importar o projeto primeiro para registrar assets
+          godot --headless --editor --quit || true
+          # Exportar release
+          godot --headless --verbose --export-release "Android" build/gym-survivor.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gym-survivor-apk
-          path: build/Android/gym-survivor.apk
+          path: |
+            build/*.apk
+            **/*.apk
